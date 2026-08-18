@@ -3,8 +3,8 @@
 **Disciplina:** Comutação de Redes Locais (TCN.0639)
 **Curso:** Tecnologia em Redes de Computadores — IFRO, Campus Porto Velho Zona Norte
 **Professor:** Jhordano Malacarne Bravim
-**Aluno:** [seu nome completo]
-**Ferramenta:** Cisco Packet Tracer [versão que você usou]
+**Aluno:** Saulo Viana de Queiroz
+**Ferramenta:** Cisco Packet Tracer 9.0.0
 
 ---
 
