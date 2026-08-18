@@ -42,15 +42,19 @@ que pede apenas as ligações físicas.
 | DIST 2 | Switch-PT (modular) | Agrega os switches de borda ACCESS 3 e ACCESS 4 |
 
 Cada switch de distribuição sobe para **os dois** switches de núcleo, usando
-**interfaces de fibra óptica GigabitEthernet**. São 4 enlaces de fibra no total,
-um cabo por enlace:
+**interfaces de fibra óptica GigabitEthernet**. Cada enlace usa **2 fibras em
+paralelo**, fisicamente preparadas para uma agregação de link de **2 Gbps**
+(2 × 1 Gbps). São 4 enlaces e 8 cabos de fibra no total:
 
-| Enlace de fibra | Velocidade |
-|---|---|
-| CORE 1 ↔ DIST 1 | 1 Gbps |
-| CORE 1 ↔ DIST 2 | 1 Gbps |
-| CORE 2 ↔ DIST 1 | 1 Gbps |
-| CORE 2 ↔ DIST 2 | 1 Gbps |
+| Enlace de fibra | Cabos | Preparado para |
+|---|---|---|
+| CORE 1 ↔ DIST 1 | 2 | 2 Gbps |
+| CORE 1 ↔ DIST 2 | 2 | 2 Gbps |
+| CORE 2 ↔ DIST 1 | 2 | 2 Gbps |
+| CORE 2 ↔ DIST 2 | 2 | 2 Gbps |
+
+Como no núcleo, a agregação em si não foi ativada: o requisito pede apenas a
+ligação física preparada para ativação futura.
 
 Essa ligação cruzada garante que, se um switch de núcleo falhar, a distribuição
 continua alcançando o restante da rede.
@@ -88,9 +92,9 @@ Nove dispositivos, todos conectados com fio:
 
 ### 2.6 Sobre os indicadores âmbar no diagrama
 
-No diagrama, alguns enlaces aparecem com o indicador em **âmbar** em vez de verde:
-as ligações entre CORE 1 e CORE 2, do lado do CORE 1, e a ponta do enlace
-CORE 1 ↔ DIST 2 no lado do DIST 2.
+No diagrama, vários enlaces aparecem com o indicador em **âmbar** em vez de
+verde, tanto nos cabos entre CORE 1 e CORE 2 quanto em pontas dos enlaces de
+fibra que ligam o núcleo à distribuição.
 
 Isso não é erro de cabeamento. São portas colocadas em **bloqueio pelo Spanning
 Tree Protocol**. Como a topologia tem caminhos redundantes de propósito
@@ -123,9 +127,13 @@ distâncias maiores que o cobre e é imune a interferência eletromagnética, qu
 o cenário típico da ligação entre o núcleo e a distribuição, normalmente em
 salas ou andares diferentes.
 
-Cada switch de distribuição tem **dois caminhos independentes** até o núcleo,
-um para cada switch de núcleo. Isso é o que sustenta a disponibilidade da rede:
-a perda de um switch de núcleo ou de um cabo de fibra não isola a distribuição.
+São 2 fibras por enlace pela mesma lógica do núcleo: cada porta GigabitEthernet
+entrega 1 Gbps, então 2 enlaces somam os 2 Gbps pedidos no requisito 5.
+
+Além da banda, cada switch de distribuição tem **dois caminhos independentes**
+até o núcleo, um para cada switch de núcleo. Isso é o que sustenta a
+disponibilidade da rede: a perda de um switch de núcleo ou de um cabo de fibra
+não isola a distribuição.
 
 ### 3.4 Padrões 802.3 envolvidos
 
@@ -188,20 +196,30 @@ sem necessidade de roteamento.
 
 ### 5.1 Teste de conectividade
 
-O teste foi feito com o comando `ping` a partir do **PC-01**, escolhendo um
-destino ligado a cada switch de borda diferente, para provar que o tráfego
-atravessa as três camadas:
+O teste foi feito com o comando `ping` a partir do **PC-01**, alcançando todos
+os endereços da rede. Como os destinos estão espalhados pelos quatro switches
+de borda, o teste prova que o tráfego atravessa as três camadas da hierarquia.
 
 | Destino | Dispositivo | Switch de borda | Resultado |
 |---|---|---|---|
+| 192.168.10.11 | PC-01 | ACCESS 1 | 4 enviados, 4 recebidos, 0% de perda |
 | 192.168.10.12 | PC-02 | ACCESS 1 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.13 | PC-03 | ACCESS 2 | 4 enviados, 4 recebidos, 0% de perda |
 | 192.168.10.14 | PC-04 | ACCESS 2 | 4 enviados, 4 recebidos, 0% de perda |
 | 192.168.10.21 | NOTE-01 | ACCESS 3 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.22 | NOTE-02 | ACCESS 3 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.23 | NOTE-03 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.24 | NOTE-04 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
 | 192.168.10.100 | SRV-01 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
 
-O ping para o PC-02 (mesmo switch de borda) responde em até 6 ms na primeira
-tentativa, tempo gasto com o ARP inicial. Os demais respondem em menos de 1 ms.
+**Nenhum pacote foi perdido em nenhum dos testes.** A maioria das respostas veio
+em menos de 1 ms; os primeiros pacotes de alguns destinos levaram alguns
+milissegundos a mais, tempo gasto com a resolução ARP inicial.
 
-Print do teste:
+Prints do teste:
 
-![Teste de ping](teste-ping.png)
+![Teste de ping — parte 1](teste-ping-1.png)
+
+![Teste de ping — parte 2](teste-ping-2.png)
+
+![Teste de ping — parte 3](teste-ping-3.png)
