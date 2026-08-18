@@ -25,8 +25,8 @@ Cada camada tem uma função distinta e um nível de redundância diferente.
 
 | Equipamento | Modelo | Função |
 |---|---|---|
-| SW-NUCLEO-01 | Switch-PT (modular) | Comutação de alta velocidade entre distribuição e roteador |
-| SW-NUCLEO-02 | Switch-PT (modular) | Redundância do núcleo |
+| CORE 1 | Switch-PT (modular) | Comutação de alta velocidade entre distribuição e roteador |
+| CORE 2 | Switch-PT (modular) | Redundância do núcleo |
 
 Os dois switches de núcleo estão ligados entre si por **4 cabos de cobre
 GigabitEthernet em paralelo**. Essas quatro portas estão fisicamente preparadas
@@ -38,13 +38,19 @@ que pede apenas as ligações físicas.
 
 | Equipamento | Modelo | Função |
 |---|---|---|
-| SW-DIST-01 | Switch-PT (modular) | Agrega os switches de borda 01 e 02 |
-| SW-DIST-02 | Switch-PT (modular) | Agrega os switches de borda 03 e 04 |
+| DIST 1 | Switch-PT (modular) | Agrega os switches de borda ACCESS 1 e ACCESS 2 |
+| DIST 2 | Switch-PT (modular) | Agrega os switches de borda ACCESS 3 e ACCESS 4 |
 
 Cada switch de distribuição sobe para **os dois** switches de núcleo, usando
-**interfaces de fibra óptica GigabitEthernet**. Cada enlace usa 2 fibras em
-paralelo, fisicamente preparadas para uma agregação de link de **2 Gbps**
-(2 × 1 Gbps). São 8 cabos de fibra no total.
+**interfaces de fibra óptica GigabitEthernet**. São 4 enlaces de fibra no total,
+um cabo por enlace:
+
+| Enlace de fibra | Velocidade |
+|---|---|
+| CORE 1 ↔ DIST 1 | 1 Gbps |
+| CORE 1 ↔ DIST 2 | 1 Gbps |
+| CORE 2 ↔ DIST 1 | 1 Gbps |
+| CORE 2 ↔ DIST 2 | 1 Gbps |
 
 Essa ligação cruzada garante que, se um switch de núcleo falhar, a distribuição
 continua alcançando o restante da rede.
@@ -53,21 +59,21 @@ continua alcançando o restante da rede.
 
 | Equipamento | Modelo | Dispositivos conectados |
 |---|---|---|
-| SW-BORDA-01 | Cisco 2960 | SRV-01, PC-01, PC-02 |
-| SW-BORDA-02 | Cisco 2960 | PC-03, PC-04 |
-| SW-BORDA-03 | Cisco 2960 | NOTE-01, NOTE-02 |
-| SW-BORDA-04 | Cisco 2960 | NOTE-03, NOTE-04 |
+| ACCESS 1 | Cisco 2960-24TT | PC-01, PC-02 |
+| ACCESS 2 | Cisco 2960-24TT | PC-03, PC-04 |
+| ACCESS 3 | Cisco 2960-24TT | NOTE-01, NOTE-02 |
+| ACCESS 4 | Cisco 2960-24TT | NOTE-03, NOTE-04, SRV-01 |
 
 Cada switch de borda tem **um único cabo** subindo para a distribuição, ligado
-na porta GigabitEthernet0/1. Não há redundância nesta camada, conforme o
-requisito 6 da atividade.
+em uma porta GigabitEthernet de uplink. Não há redundância nesta camada,
+conforme o requisito 6 da atividade.
 
 ### 2.4 Roteador
 
-O roteador **R-BORDA-WAN** (Cisco 1841) tem duas interfaces FastEthernet nativas:
+O roteador **Router0** (Cisco 2811) tem duas interfaces FastEthernet nativas:
 
-- `FastEthernet0/0` → SW-NUCLEO-01
-- `FastEthernet0/1` → SW-NUCLEO-02
+- `FastEthernet0/0` → CORE 1
+- `FastEthernet0/1` → CORE 2
 
 Atende ao requisito 3: um roteador com duas interfaces FastEthernet
 ligadas a dois switches diferentes.
@@ -79,6 +85,19 @@ Nove dispositivos, todos conectados com fio:
 - 4 computadores desktop (PC-01 a PC-04)
 - 4 notebooks (NOTE-01 a NOTE-04)
 - 1 servidor (SRV-01)
+
+### 2.6 Sobre os indicadores âmbar no diagrama
+
+No diagrama, alguns enlaces aparecem com o indicador em **âmbar** em vez de verde:
+as ligações entre CORE 1 e CORE 2, do lado do CORE 1, e a ponta do enlace
+CORE 1 ↔ DIST 2 no lado do DIST 2.
+
+Isso não é erro de cabeamento. São portas colocadas em **bloqueio pelo Spanning
+Tree Protocol**. Como a topologia tem caminhos redundantes de propósito
+(núcleo duplicado e ligação cruzada com a distribuição), o STP desativa
+logicamente os caminhos excedentes para evitar loops de camada 2, mantendo
+apenas um caminho ativo por vez. Se um enlace ativo cair, o STP reativa um dos
+bloqueados. É exatamente o comportamento esperado numa rede com redundância.
 
 ---
 
@@ -97,10 +116,16 @@ Agregação de link soma a banda dos enlaces físicos. Como cada porta
 GigabitEthernet entrega 1 Gbps, são necessários 4 enlaces para alcançar os
 4 Gbps pedidos no requisito 4.
 
-### 3.3 Por que 2 fibras entre núcleo e distribuição
+### 3.3 Por que fibra entre núcleo e distribuição
 
-Pela mesma lógica: 2 enlaces GigabitEthernet de fibra somam os 2 Gbps pedidos
-no requisito 5.
+A fibra foi escolhida por ser o meio indicado para enlaces de backbone: alcança
+distâncias maiores que o cobre e é imune a interferência eletromagnética, que é
+o cenário típico da ligação entre o núcleo e a distribuição, normalmente em
+salas ou andares diferentes.
+
+Cada switch de distribuição tem **dois caminhos independentes** até o núcleo,
+um para cada switch de núcleo. Isso é o que sustenta a disponibilidade da rede:
+a perda de um switch de núcleo ou de um cabo de fibra não isola a distribuição.
 
 ### 3.4 Padrões 802.3 envolvidos
 
@@ -109,7 +134,7 @@ no requisito 5.
 | IEEE 802.3u | FastEthernet 100BASE-TX: roteador ↔ núcleo e dispositivos finais ↔ borda |
 | IEEE 802.3ab | GigabitEthernet 1000BASE-T em cobre: núcleo ↔ núcleo e distribuição ↔ borda |
 | IEEE 802.3z | GigabitEthernet 1000BASE-X em fibra: núcleo ↔ distribuição |
-| IEEE 802.3ad / 802.1AX | Agregação de link (LACP), prevista para ativação futura |
+| IEEE 802.3ad / 802.1AX | Agregação de link (LACP), prevista para ativação futura nos 4 enlaces do núcleo |
 
 Observação: a agregação de link foi padronizada originalmente como IEEE 802.3ad
 e posteriormente transferida para o padrão IEEE 802.1AX.
@@ -128,11 +153,15 @@ e posteriormente transferida para o padrão IEEE 802.1AX.
 
 ## 4. Tipos de cabo utilizados
 
+No diagrama, o traço da linha identifica o tipo de cabo: linha contínua preta é
+cobre direto, linha tracejada preta é cobre crossover e linha vermelha é fibra.
+
 | Ligação | Cabo |
 |---|---|
 | Roteador ↔ switch de núcleo | Cobre direto (straight-through) |
-| Switch ↔ switch (cobre) | Cobre crossover |
+| Núcleo ↔ núcleo | Cobre crossover |
 | Núcleo ↔ distribuição | Fibra óptica |
+| Distribuição ↔ borda | Cobre crossover |
 | Dispositivo final ↔ switch de borda | Cobre direto (straight-through) |
 
 ---
@@ -155,7 +184,24 @@ Todos os dispositivos finais foram configurados na mesma rede
 | SRV-01 | 192.168.10.100 |
 
 Como todos estão na mesma rede, a comunicação ocorre por comutação de camada 2,
-sem necessidade de roteamento. O teste foi feito com o comando `ping` a partir
-do PC-01 para os demais dispositivos.
+sem necessidade de roteamento.
 
-Print do teste: ![Teste de ping](teste-ping.png)
+### 5.1 Teste de conectividade
+
+O teste foi feito com o comando `ping` a partir do **PC-01**, escolhendo um
+destino ligado a cada switch de borda diferente, para provar que o tráfego
+atravessa as três camadas:
+
+| Destino | Dispositivo | Switch de borda | Resultado |
+|---|---|---|---|
+| 192.168.10.12 | PC-02 | ACCESS 1 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.14 | PC-04 | ACCESS 2 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.21 | NOTE-01 | ACCESS 3 | 4 enviados, 4 recebidos, 0% de perda |
+| 192.168.10.100 | SRV-01 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
+
+O ping para o PC-02 (mesmo switch de borda) responde em até 6 ms na primeira
+tentativa, tempo gasto com o ARP inicial. Os demais respondem em menos de 1 ms.
+
+Print do teste:
+
+![Teste de ping](teste-ping.png)
