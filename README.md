@@ -178,6 +178,17 @@ O Switch-PT-Empty vem sem nenhum módulo instalado. Isso permitiu montar cada
 switch com exatamente a quantidade de portas de cobre Gigabit e de fibra Gigabit
 que o cenário exige.
 
+### 3.2 Por que 4 cabos entre os switches de núcleo
+
+Agregação de link soma a capacidade dos enlaces físicos. Como cada porta
+GigabitEthernet entrega 1 Gbps, são necessários 4 enlaces para alcançar os
+4 Gbps pedidos no requisito 4.
+
+O mesmo raciocínio vale para a fibra entre o núcleo e a distribuição, descrita
+na seção 3.3: 2 enlaces de 1 Gbps somam os 2 Gbps do requisito 5. A ressalva
+sobre capacidade total contra velocidade de um fluxo individual está na
+[seção 2.1](#21-camada-de-núcleo).
+
 ### 3.3 Por que fibra entre núcleo e distribuição
 
 A fibra foi escolhida por ser o meio indicado para enlaces de backbone: alcança
