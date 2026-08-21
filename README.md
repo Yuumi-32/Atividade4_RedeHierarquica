@@ -38,56 +38,15 @@ cobre direto, **linha tracejada preta** é cobre crossover e **linha vermelha**
 ### 1.2 Visão lógica por camadas
 
 Como a captura do simulador espalha os equipamentos pela tela, o diagrama abaixo
-mostra a mesma rede organizada pelas três camadas hierárquicas:
+mostra a mesma rede organizada pelas três camadas hierárquicas, do roteador até
+os dispositivos finais:
 
-```mermaid
-flowchart TD
-    R["Router0<br/>Cisco 2811"]
+![Visão lógica da rede por camadas](diagrama-logico.svg)
 
-    subgraph NUCLEO["CAMADA DE NÚCLEO"]
-        direction LR
-        C1["CORE 1<br/>Switch-PT"]
-        C2["CORE 2<br/>Switch-PT"]
-    end
-
-    subgraph DISTRIB["CAMADA DE DISTRIBUIÇÃO"]
-        direction LR
-        D1["DIST 1<br/>Switch-PT"]
-        D2["DIST 2<br/>Switch-PT"]
-    end
-
-    subgraph BORDA["CAMADA DE BORDA"]
-        direction LR
-        A1["ACCESS 1<br/>2960-24TT"]
-        A2["ACCESS 2<br/>2960-24TT"]
-        A3["ACCESS 3<br/>2960-24TT"]
-        A4["ACCESS 4<br/>2960-24TT"]
-    end
-
-    R ---|"Fa0/0"| C1
-    R ---|"Fa0/1"| C2
-    C1 ---|"4x cobre GE — 4 Gbps"| C2
-
-    C1 ---|"2x fibra"| D1
-    C1 ---|"2x fibra"| D2
-    C2 ---|"2x fibra"| D1
-    C2 ---|"2x fibra"| D2
-
-    D1 ---|"1x cobre GE"| A1
-    D1 ---|"1x cobre GE"| A2
-    D2 ---|"1x cobre GE"| A3
-    D2 ---|"1x cobre GE"| A4
-
-    A1 --- PC01["PC-01"]
-    A1 --- PC02["PC-02"]
-    A2 --- PC03["PC-03"]
-    A2 --- PC04["PC-04"]
-    A3 --- N01["NOTE-01"]
-    A3 --- N02["NOTE-02"]
-    A4 --- N03["NOTE-03"]
-    A4 --- N04["NOTE-04"]
-    A4 --- SRV["SRV-01"]
-```
+Nesta visão cada enlace aparece como uma linha única, para manter a hierarquia
+legível. A quantidade real de cabos de cada ligação está nas seções
+[2.1](#21-camada-de-núcleo), [2.2](#22-camada-de-distribuição) e
+[4](#4-tipos-de-cabo-utilizados).
 
 ---
 
