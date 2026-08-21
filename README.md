@@ -1,10 +1,10 @@
 # Atividade 4 — Simulação de ambiente hierárquico de rede local
 
-**Disciplina:** Comutação de Redes Locais (TCN.0639)
-**Curso:** Tecnologia em Redes de Computadores — IFRO, Campus Porto Velho Zona Norte
-**Professor:** Jhordano Malacarne Bravim
-**Aluno:** Saulo Viana de Queiroz
-**Ferramenta:** Cisco Packet Tracer 9.0.0
+- **Disciplina:** Comutação de Redes Locais (TCN.0639)
+- **Curso:** Tecnologia em Redes de Computadores — IFRO, Campus Porto Velho Zona Norte
+- **Professor:** Jhordano Malacarne Bravim
+- **Aluno:** Saulo Viana de Queiroz
+- **Ferramenta:** Cisco Packet Tracer 9.0.0
 
 ---
 
@@ -59,8 +59,8 @@ Cada camada tem uma função distinta e um nível de redundância diferente.
 
 | Equipamento | Modelo | Função |
 |---|---|---|
-| CORE 1 | Switch-PT (modular) | Comutação de alta velocidade entre distribuição e roteador |
-| CORE 2 | Switch-PT (modular) | Redundância do núcleo |
+| CORE 1 | Switch-PT-Empty (modular) | Comutação de alta velocidade entre distribuição e roteador |
+| CORE 2 | Switch-PT-Empty (modular) | Redundância do núcleo |
 
 Os dois switches de núcleo estão ligados entre si por **4 cabos de cobre
 GigabitEthernet em paralelo**. Essas quatro portas estão fisicamente preparadas
@@ -68,12 +68,19 @@ para receber, no futuro, uma agregação de link de **4 Gbps** (4 × 1 Gbps).
 A agregação ainda não foi ativada, conforme o requisito 1 da atividade,
 que pede apenas as ligações físicas.
 
+Vale registrar uma característica da agregação de link: os 4 Gbps são a
+**capacidade total** do conjunto, e não a velocidade de uma transmissão
+individual. O switch distribui os fluxos entre os quatro cabos com base em
+endereços (MAC, IP ou porta, conforme o método adotado pelo equipamento). Uma
+única conversa entre dois dispositivos continua limitada a 1 Gbps, que é a
+velocidade de um cabo.
+
 ### 2.2 Camada de distribuição
 
 | Equipamento | Modelo | Função |
 |---|---|---|
-| DIST 1 | Switch-PT (modular) | Agrega os switches de borda ACCESS 1 e ACCESS 2 |
-| DIST 2 | Switch-PT (modular) | Agrega os switches de borda ACCESS 3 e ACCESS 4 |
+| DIST 1 | Switch-PT-Empty (modular) | Agrega os switches de borda ACCESS 1 e ACCESS 2 |
+| DIST 2 | Switch-PT-Empty (modular) | Agrega os switches de borda ACCESS 3 e ACCESS 4 |
 
 Cada switch de distribuição sobe para **os dois** switches de núcleo, usando
 **interfaces de fibra óptica GigabitEthernet**. Cada enlace usa **2 fibras em
@@ -90,8 +97,11 @@ paralelo**, fisicamente preparadas para uma agregação de link de **2 Gbps**
 Como no núcleo, a agregação em si não foi ativada: o requisito pede apenas a
 ligação física preparada para ativação futura.
 
-Essa ligação cruzada garante que, se um switch de núcleo falhar, a distribuição
-continua alcançando o restante da rede.
+Essa ligação cruzada dá a cada switch de distribuição dois caminhos
+independentes até o núcleo. Se um switch de núcleo falhar, a distribuição volta
+a alcançar o restante da rede pelo outro caminho, assim que o Spanning Tree
+Protocol reconverge. A reconvergência não é instantânea: o tempo depende da
+versão do STP em uso no equipamento.
 
 ### 2.3 Camada de borda (acesso)
 
@@ -252,9 +262,8 @@ sem necessidade de roteamento.
 
 ### 5.1 Teste de conectividade
 
-O teste foi feito com o comando `ping` a partir do **PC-01**, alcançando todos
-os endereços da rede. Como os destinos estão espalhados pelos quatro switches
-de borda, o teste prova que o tráfego atravessa as três camadas da hierarquia.
+O teste foi feito com o comando `ping` a partir do **PC-01**, que está ligado ao
+ACCESS 1. Foram testados os nove endereços da rede.
 
 | Destino | Dispositivo | Switch de borda | Resultado |
 |---|---|---|---|
@@ -268,9 +277,31 @@ de borda, o teste prova que o tráfego atravessa as três camadas da hierarquia.
 | 192.168.10.24 | NOTE-04 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
 | 192.168.10.100 | SRV-01 | ACCESS 4 | 4 enviados, 4 recebidos, 0% de perda |
 
-**Nenhum pacote foi perdido em nenhum dos testes.** A maioria das respostas veio
-em menos de 1 ms; os primeiros pacotes de alguns destinos levaram alguns
-milissegundos a mais, tempo gasto com a resolução ARP inicial.
+**Nenhum pacote foi perdido em nenhum dos testes.**
+
+#### O que cada grupo de destinos comprova
+
+Como o PC-01 está ligado ao ACCESS 1, cada grupo de destinos percorre uma parte
+diferente da hierarquia:
+
+| Destinos | Caminho percorrido | Camadas exercitadas |
+|---|---|---|
+| 192.168.10.11 | O pacote não sai do PC-01, pois é o endereço da própria máquina | Nenhuma. Confirma apenas que a pilha TCP/IP do PC-01 está ativa |
+| 192.168.10.12 | PC-01 → ACCESS 1 → PC-02 | Acesso |
+| 192.168.10.13 e 192.168.10.14 | PC-01 → ACCESS 1 → DIST 1 → ACCESS 2 → destino | Acesso e distribuição |
+| 192.168.10.21 a 192.168.10.24 e 192.168.10.100 | PC-01 → ACCESS 1 → DIST 1 → núcleo → DIST 2 → ACCESS 3 ou ACCESS 4 → destino | Acesso, distribuição e núcleo |
+
+São, portanto, os cinco últimos destinos (NOTE-01 a NOTE-04 e SRV-01) que
+comprovam o tráfego atravessando as três camadas da hierarquia. Eles estão do
+outro lado da rede, ligados ao DIST 2, e só podem ser alcançados passando pelo
+núcleo.
+
+#### Tempos de resposta
+
+A maior parte das respostas veio em menos de 1 ms. Alguns pacotes isolados
+levaram entre 2 ms e 7 ms. Essa variação vem do próprio simulador e não indica
+perda nem falha: em todos os nove testes o resultado foi 4 pacotes enviados e 4
+recebidos, com 0% de perda.
 
 Prints do teste:
 
