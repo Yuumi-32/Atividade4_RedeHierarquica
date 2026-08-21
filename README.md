@@ -14,6 +14,81 @@
 
 Arquivo do simulador: [Atividade4_RedeHierarquica.pkt](Atividade4_RedeHierarquica.pkt)
 
+### 1.1 Como ler o diagrama
+
+O diagrama acima é a captura da topologia no Packet Tracer. Nele a posição dos
+equipamentos segue o traçado real dos cabos, e não uma pilha de camadas, então
+vale a orientação:
+
+- **Router0** fica no topo, sozinho.
+- **CORE 1** e **CORE 2** ficam logo abaixo do roteador, ligados entre si pelo
+  feixe de 4 cabos tracejados.
+- **DIST 1** e **DIST 2** ficam na faixa horizontal central, no centro da
+  imagem, recebendo os feixes vermelhos que descem do núcleo.
+- Os **switches de borda** (ACCESS 1 a ACCESS 4) ficam espalhados ao redor da
+  distribuição — ACCESS 1 à esquerda e ACCESS 2 abaixo, ambos ligados ao DIST 1;
+  ACCESS 3 abaixo e ACCESS 4 à direita, ambos ligados ao DIST 2.
+- Os **dispositivos finais** ficam nas pontas, sempre a um cabo de distância do
+  seu switch de borda.
+
+O tipo do cabo é identificado pelo traço da linha: **linha contínua preta** é
+cobre direto, **linha tracejada preta** é cobre crossover e **linha vermelha**
+é fibra óptica. O detalhamento está na [seção 4](#4-tipos-de-cabo-utilizados).
+
+### 1.2 Visão lógica por camadas
+
+Como a captura do simulador espalha os equipamentos pela tela, o diagrama abaixo
+mostra a mesma rede organizada pelas três camadas hierárquicas:
+
+```mermaid
+flowchart TD
+    R["Router0<br/>Cisco 2811"]
+
+    subgraph NUCLEO["CAMADA DE NÚCLEO"]
+        direction LR
+        C1["CORE 1<br/>Switch-PT"]
+        C2["CORE 2<br/>Switch-PT"]
+    end
+
+    subgraph DISTRIB["CAMADA DE DISTRIBUIÇÃO"]
+        direction LR
+        D1["DIST 1<br/>Switch-PT"]
+        D2["DIST 2<br/>Switch-PT"]
+    end
+
+    subgraph BORDA["CAMADA DE BORDA"]
+        direction LR
+        A1["ACCESS 1<br/>2960-24TT"]
+        A2["ACCESS 2<br/>2960-24TT"]
+        A3["ACCESS 3<br/>2960-24TT"]
+        A4["ACCESS 4<br/>2960-24TT"]
+    end
+
+    R ---|"Fa0/0"| C1
+    R ---|"Fa0/1"| C2
+    C1 ---|"4x cobre GE — 4 Gbps"| C2
+
+    C1 ---|"2x fibra"| D1
+    C1 ---|"2x fibra"| D2
+    C2 ---|"2x fibra"| D1
+    C2 ---|"2x fibra"| D2
+
+    D1 ---|"1x cobre GE"| A1
+    D1 ---|"1x cobre GE"| A2
+    D2 ---|"1x cobre GE"| A3
+    D2 ---|"1x cobre GE"| A4
+
+    A1 --- PC01["PC-01"]
+    A1 --- PC02["PC-02"]
+    A2 --- PC03["PC-03"]
+    A2 --- PC04["PC-04"]
+    A3 --- N01["NOTE-01"]
+    A3 --- N02["NOTE-02"]
+    A4 --- N03["NOTE-03"]
+    A4 --- N04["NOTE-04"]
+    A4 --- SRV["SRV-01"]
+```
+
 ---
 
 ## 2. Descrição da configuração escolhida
@@ -92,9 +167,17 @@ Nove dispositivos, todos conectados com fio:
 
 ### 2.6 Sobre os indicadores âmbar no diagrama
 
-No diagrama, vários enlaces aparecem com o indicador em **âmbar** em vez de
-verde, tanto nos cabos entre CORE 1 e CORE 2 quanto em pontas dos enlaces de
-fibra que ligam o núcleo à distribuição.
+No diagrama aparecem **9 indicadores em âmbar** no lugar do verde. Todos estão
+concentrados entre o núcleo e a distribuição — nenhum enlace da camada de borda
+ou de dispositivo final está em âmbar:
+
+| Enlace | Cabos no enlace | Indicadores em âmbar |
+|---|---|---|
+| CORE 1 ↔ CORE 2 (cobre) | 4 | 4 — o feixe inteiro |
+| CORE 1 ↔ DIST 1 (fibra) | 2 | 1 |
+| CORE 1 ↔ DIST 2 (fibra) | 2 | 2 — o enlace inteiro |
+| CORE 2 ↔ DIST 1 (fibra) | 2 | 1 |
+| CORE 2 ↔ DIST 2 (fibra) | 2 | 1 |
 
 Isso não é erro de cabeamento. São portas colocadas em **bloqueio pelo Spanning
 Tree Protocol**. Como a topologia tem caminhos redundantes de propósito
@@ -102,6 +185,14 @@ Tree Protocol**. Como a topologia tem caminhos redundantes de propósito
 logicamente os caminhos excedentes para evitar loops de camada 2, mantendo
 apenas um caminho ativo por vez. Se um enlace ativo cair, o STP reativa um dos
 bloqueados. É exatamente o comportamento esperado numa rede com redundância.
+
+O caso do DIST 2 ilustra bem o mecanismo: as **duas** fibras que o ligam ao
+CORE 1 estão bloqueadas, ou seja, neste momento ele fala com o núcleo apenas
+pelo CORE 2. As fibras para o CORE 1 continuam fisicamente ligadas e prontas —
+se o CORE 2 ou o enlace ativo cair, o STP as libera e o DIST 2 volta a alcançar
+a rede pelo CORE 1. É a redundância descrita na seção 3.3 funcionando na
+prática, e é justamente por isso que a rede continua no ar mesmo com metade dos
+caminhos do núcleo em espera.
 
 ---
 
@@ -149,7 +240,11 @@ e posteriormente transferida para o padrão IEEE 802.1AX.
 
 ### 3.5 Escalabilidade, hierarquia, redundância e disponibilidade
 
-- **Hierarquia:** as três camadas estão separadas visualmente e por função.
+- **Hierarquia:** as três camadas estão separadas por função e por tipo de
+  enlace — cobre agregado no núcleo, fibra entre núcleo e distribuição, cobre
+  simples da distribuição para a borda. A captura do simulador espalha os
+  equipamentos pela tela seguindo o traçado dos cabos, então a separação em
+  camadas fica mais evidente na visão lógica da [seção 1.2](#12-visão-lógica-por-camadas).
 - **Escalabilidade:** para crescer, basta acrescentar switches de borda na
   distribuição, sem alterar o núcleo.
 - **Redundância:** o núcleo é duplicado e cada switch de distribuição tem dois
@@ -163,14 +258,16 @@ e posteriormente transferida para o padrão IEEE 802.1AX.
 
 No diagrama, o traço da linha identifica o tipo de cabo: linha contínua preta é
 cobre direto, linha tracejada preta é cobre crossover e linha vermelha é fibra.
+A coluna de quantidade abaixo bate com o que dá para contar na imagem.
 
-| Ligação | Cabo |
-|---|---|
-| Roteador ↔ switch de núcleo | Cobre direto (straight-through) |
-| Núcleo ↔ núcleo | Cobre crossover |
-| Núcleo ↔ distribuição | Fibra óptica |
-| Distribuição ↔ borda | Cobre crossover |
-| Dispositivo final ↔ switch de borda | Cobre direto (straight-through) |
+| Ligação | Cabo | Traço no diagrama | Cabos |
+|---|---|---|---|
+| Roteador ↔ switch de núcleo | Cobre direto (straight-through) | Contínuo preto | 2 |
+| Núcleo ↔ núcleo | Cobre crossover | Tracejado preto | 4 |
+| Núcleo ↔ distribuição | Fibra óptica | Vermelho | 8 |
+| Distribuição ↔ borda | Cobre crossover | Tracejado preto | 4 |
+| Dispositivo final ↔ switch de borda | Cobre direto (straight-through) | Contínuo preto | 9 |
+| **Total** | | | **27** |
 
 ---
 
