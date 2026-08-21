@@ -167,18 +167,16 @@ caminhos do núcleo em espera.
 
 ## 3. Justificativa das escolhas
 
-### 3.1 Por que Switch-PT modular no núcleo e na distribuição
+### 3.1 Por que Switch-PT-Empty modular no núcleo e na distribuição
 
-Os switches de modelo fixo do Packet Tracer (2950, 2960, 3560) possuem poucas
-portas GigabitEthernet e não oferecem portas de fibra óptica. O Switch-PT é
-modular, o que permitiu instalar exatamente a quantidade de portas de cobre
-Gigabit e de fibra Gigabit exigida pelos requisitos 4 e 5.
+Os switches de modelo fixo do Packet Tracer, como o 2960-24TT usado na camada de
+borda, trazem apenas 2 portas GigabitEthernet. Essa quantidade não atende aos
+requisitos 4 e 5, que exigem 4 portas Gigabit de cobre entre os núcleos e mais
+2 portas de fibra Gigabit por enlace até a distribuição.
 
-### 3.2 Por que 4 cabos entre os switches de núcleo
-
-Agregação de link soma a banda dos enlaces físicos. Como cada porta
-GigabitEthernet entrega 1 Gbps, são necessários 4 enlaces para alcançar os
-4 Gbps pedidos no requisito 4.
+O Switch-PT-Empty vem sem nenhum módulo instalado. Isso permitiu montar cada
+switch com exatamente a quantidade de portas de cobre Gigabit e de fibra Gigabit
+que o cenário exige.
 
 ### 3.3 Por que fibra entre núcleo e distribuição
 
